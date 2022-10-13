@@ -179,12 +179,10 @@ class VisuomotorTransformerFrame(ExtendedModule):
         assert (int(isinstance(self.mix_action, dict)) + int(self.fuse_feature_single_action) <= 1), (
             "Only choose at most one option among mix_action and fuse_feature_single_action!"
         )
-        if self.mix_action:
-            assert isinstance(self.mix_action, dict), "mix_action has to be a network config!"
 
         self.base_action_dim = 4 # hardcoded
         self.per_hand_action_dim = 9 # hardcoded
-        if self.use_obj_frames is None or not mix_action:
+        if self.use_obj_frames is None or not self.mix_action:
             self.full_action_dim = self.base_action_dim + (self.Nframe_m_obj - 1) * self.per_hand_action_dim # dim of the entire action space
         else: # if mix_action and use_obj_frames, then Nframe_m_obj == Nframe
             self.full_action_dim = self.base_action_dim + (self.Nframe_m_obj - len(self.use_obj_frames) - 1) * self.per_hand_action_dim
@@ -192,6 +190,7 @@ class VisuomotorTransformerFrame(ExtendedModule):
         self.is_value = is_value
 
         if self.mix_action and not self.is_value:
+            assert isinstance(self.mix_action, dict), "mix_action has to be a network config!"
             self.mix_action.mlp_spec[0] = self.mix_action.mlp_spec[0] * self.Nframe_m_obj
             self.mix_action.mlp_spec.append(self.Nframe_m_obj * self.full_action_dim)
             self.mix_action_params = build_model(self.mix_action)

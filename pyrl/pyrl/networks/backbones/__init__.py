@@ -1,5 +1,5 @@
 from .mlp import LinearMLP, ConvMLP
-from .visuomotor import Visuomotor, VisuomotorTransformerFrame, VisuomotorTransformerFrameLink
+from .visuomotor import Visuomotor, VisuomotorTransformerFrame
 from .pointnet import PointNet
 from .transformer import TransformerEncoder
 

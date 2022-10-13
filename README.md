@@ -42,7 +42,7 @@ pip install pytorch3d
 Install SAPIEN:
 
 ```
-pip install sapien.whl
+pip install sapien-2.0.0.dev20220317-cp38-cp38-manylinux2014_x86_64.whl
 ```
 
 Install our code base:
@@ -68,7 +68,9 @@ Note that the objects meshes under this `partnet-mobility-dataset` are different
 
 First, `cd {this_directory}/pyrl`
 
-You can find example scripts for training single-frame policies and FrameMiner-MixAction(FM-MA) at `./script`. To evaluate an existing model, simply add `--evaluation` to the script arguments. The corresponding config files are in `configs/mfrl/ppo/maniskill`. In addition, you can use `--cfg-options` in the command line to override arguments in the config files (like the example scripts do). 
+You can find example scripts for training single-frame policies and FrameMiner-MixAction(FM-MA) at `./script`. To evaluate an existing model, simply add `--evaluation` and `--resume-from {path_to_ckpt}` to the script arguments. The corresponding config files are in `configs/mfrl/ppo/maniskill`. In addition, you can use `--cfg-options` in the command line to override arguments in the config files (like the example scripts do). 
+
+*If you train end-effector frame-based policies (single-frame policies or FrameMiners), then for OpenCabinetDoor and OpenCabinetDrawer, pass in `env_cfg.nhand_pose=1` to the script since they are single-arm environments. For PushChair and MoveBucket, pass in `env_cfg.nhand_pose=2` since they are dual arm environments.*
 
 #### More Explanations of Implementation Details
 
