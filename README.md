@@ -1,5 +1,9 @@
 ## Frame Mining: a Free Lunch for Learning Robotic Manipulation from 3D Point Clouds
 
+[Arxiv]() | [Project website](https://colin97.github.io/FrameMining/)
+
+![teaser](teaser.jpg)
+
 - [Frame Mining: a Free Lunch for Learning Robotic Manipulation from 3D Point Clouds](#frame-mining-a-free-lunch-for-learning-robotic-manipulation-from-3d-point-clouds)
   - [FrameMiner-MixAction in ManiSkill2](#frameminer-mixaction-in-maniskill2)
   - [Running this Codebase](#running-this-codebase)
