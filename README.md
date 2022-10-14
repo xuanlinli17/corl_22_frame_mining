@@ -1,26 +1,21 @@
 ## Frame Mining: a Free Lunch for Learning Robotic Manipulation from 3D Point Clouds
 
 - [Frame Mining: a Free Lunch for Learning Robotic Manipulation from 3D Point Clouds](#frame-mining-a-free-lunch-for-learning-robotic-manipulation-from-3d-point-clouds)
-  - [Stand-Alone Implementation of FrameMiner-MixAction](#stand-alone-implementation-of-frameminer-mixaction)
   - [FrameMiner-MixAction in ManiSkill2](#frameminer-mixaction-in-maniskill2)
   - [Running this Codebase](#running-this-codebase)
     - [Installation](#installation)
     - [Example Training Scripts](#example-training-scripts)
     - [More Explanations of Implementation Details](#more-explanations-of-implementation-details)
-  - [Caveats for Point Cloud-based Manipulation Learning](#caveats-for-point-cloud-based-manipulation-learning)
-
-### Stand-Alone Implementation of FrameMiner-MixAction
-
-For convenience, we have included a stand-alone implementation of FrameMiner-MixAction in `frameminer_mixaction_stand_alone.py`, which is independent of this codebase.
+  - [Caveats for Point Cloud-based Manipulation Learning (especially if you want to adapt our method/code for other tasks)](#caveats-for-point-cloud-based-manipulation-learning-especially-if-you-want-to-adapt-our-methodcode-for-other-tasks)
 
 ### FrameMiner-MixAction in ManiSkill2
 
-We have integrated FrameMiner-MixAction in [ManiSkill2-Learn](https://github.com/haosulab/ManiSkill2-Learn), which is a framework for solving manipulation skills in (https://github.com/haosulab/ManiSkill2). 
+We have integrated FrameMiner-MixAction in [ManiSkill2-Learn](https://github.com/haosulab/ManiSkill2-Learn). ManiSkill2-Learn naturally supports manipulation learning in [ManiSkill2](https://github.com/haosulab/ManiSkill2), which is the next generation of the SAPIEN ManiSkill benchmark with significant improvements. 
 
 
 ### Running this Codebase
 
-If you would like to perform experiments using this code base, follow the instructions below.
+If you would like to perform experiments using this code base, follow the instructions below. Experiment settings largely follow [ManiSkill1](https://github.com/haosulab/ManiSkill). 
 
 #### Installation
 
@@ -84,9 +79,9 @@ Environment is built through the `make_gym_env` function in `pyrl/env/env_utils.
 
 More details can be inferred through the configuration files in `configs/mfrl/ppo/maniskill`. The APIs are similar to [ManiSkill2-Learn](https://github.com/haosulab/ManiSkill2-Learn).
 
-### Caveats for Point Cloud-based Manipulation Learning
+### Caveats for Point Cloud-based Manipulation Learning (especially if you want to adapt our method/code for other tasks)
 
-If you look into the configurations files (`configs/mfrl/ppo/maniskill` in this repo, or the ones in `ManiSkill2-Learn`), you might notice that there is an argument `zero_init_output=True`. This sets the last layer of MLP before the policy / value outputs to initialize to zero at the beginning of training. We have found that this is of great help for stabilizing initial-stage training, especially in FrameMiners where there are multiple visual feature extractors.
+If you look into the configurations files (`configs/mfrl/ppo/maniskill` in this repo, or the ones in `ManiSkill2-Learn`), you might notice that there is an argument `zero_init_output=True`. This initializes the last layer of MLP before the policy / value outputs to zero at the beginning of training. We have found that this is of great help for stabilizing initial-stage training, especially in FrameMiners where there are multiple visual feature extractors.
 
 If you look into our PointNet implementations (`pyrl/networks/backbones/pointnet.py`), you may notice that we have removed the spatial transformation layer from the original PointNet, and we added Layer Normalization to the network. Without Layer Normalization, point cloud-based agent training will easily fail. 
 
