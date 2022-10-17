@@ -1,6 +1,6 @@
 ## Frame Mining: a Free Lunch for Learning Robotic Manipulation from 3D Point Clouds
 
-[Arxiv]() | [Project website](https://colin97.github.io/FrameMining/)
+[Arxiv](https://arxiv.org/pdf/2210.07442.pdf) | [Project website](https://colin97.github.io/FrameMining/)
 
 ![teaser](teaser.jpg)
 
