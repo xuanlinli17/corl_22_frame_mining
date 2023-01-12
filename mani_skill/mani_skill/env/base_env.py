@@ -12,18 +12,28 @@ import numpy as np
 import requests
 import sapien.core as sapien
 from gym import Env, spaces
-from mani_skill.utils.config_parser import preprocess, process_variables, process_variants
+from mani_skill.utils.config_parser import (
+    preprocess,
+    process_variables,
+    process_variants,
+)
 from mani_skill.utils.geometry import angle_distance
 from mani_skill.utils.misc import get_actor_state, get_pad_articulation_state
 from sapien.core import Pose
 from sapien.utils import Viewer
 
 from ..agent import CombinedAgent
-from .camera import CombinedCamera, read_images_from_camera, read_pointclouds_from_camera
+from .camera import (
+    CombinedCamera,
+    read_images_from_camera,
+    read_pointclouds_from_camera,
+)
 
 
 def download_data(model_id, directory=None):
-    url = "https://storage1.ucsd.edu/datasets/PartNetMobilityScrambled/{}.zip".format(model_id)
+    url = "https://storage1.ucsd.edu/datasets/PartNetMobilityScrambled/{}.zip".format(
+        model_id
+    )
     if not directory:
         directory = os.environ.get("PARTNET_MOBILITY_DATASET")
         if not directory:
@@ -37,7 +47,11 @@ def download_data(model_id, directory=None):
     # download file
     r = requests.get(url, stream=True)
     if not r.ok:
-        raise Exception("Download PartNet-Mobility failed. " "Please check your token and IP address." "Also make sure sure the model id is valid")
+        raise Exception(
+            "Download PartNet-Mobility failed. "
+            "Please check your token and IP address."
+            "Also make sure sure the model id is valid"
+        )
 
     z = zipfile.ZipFile(io.BytesIO(r.content))
 
@@ -112,7 +126,9 @@ class BaseEnv(Env):
         self.add_origin = add_origin
         self.target_xy = None
         self.object_index_point = None
-        self.fixed_level = eval(fixed_level) if isinstance(fixed_level, str) else fixed_level
+        self.fixed_level = (
+            eval(fixed_level) if isinstance(fixed_level, str) else fixed_level
+        )
         self.bbox_cache = {}
         self.with_3d_ann = with_3d_ann
         self.with_hand_pose = with_hand_pose
@@ -140,7 +156,11 @@ class BaseEnv(Env):
         self._renderer = _renderer
 
         if xy_noise_std is not None:
-            assert xy_noise_std[-1] >= 0 if isinstance(xy_noise_std, (tuple, list)) else xy_noise_std > 0
+            assert (
+                xy_noise_std[-1] >= 0
+                if isinstance(xy_noise_std, (tuple, list))
+                else xy_noise_std > 0
+            )
 
         # self.wrong_scale_id = [1005, 1016, 1021, 1024, 1027, 1032, 1035, 1038, 1040, 1044, 1056, 1063, 1079, 1082, 1008, 1011, 1043, 1055, 1001, 1002]
         self.scale_ratio_range = scale_ratio_range
@@ -153,7 +173,11 @@ class BaseEnv(Env):
 
         self.yaml_config = preprocess(config_file)
         if num_objects is not None:
-            keys_list = sorted(self.yaml_config["layout"]["articulations"][0]["_variants"]["options"].keys())
+            keys_list = sorted(
+                self.yaml_config["layout"]["articulations"][0]["_variants"][
+                    "options"
+                ].keys()
+            )
             my_random = np.random.RandomState(seed=objects_seed)
             indices = np.arange(len(keys_list))
             my_random.shuffle(indices)
@@ -161,14 +185,24 @@ class BaseEnv(Env):
             indices = indices[:num_objects]
             keys_list = [keys_list[i] for i in indices]
             self.yaml_config["layout"]["articulations"][0]["_variants"]["options"] = {
-                key: self.yaml_config["layout"]["articulations"][0]["_variants"]["options"][key] for key in keys_list
+                key: self.yaml_config["layout"]["articulations"][0]["_variants"][
+                    "options"
+                ][key]
+                for key in keys_list
             }
         elif object_ids_set is not None:
-            keys_list = sorted(self.yaml_config["layout"]["articulations"][0]["_variants"]["options"].keys())
+            keys_list = sorted(
+                self.yaml_config["layout"]["articulations"][0]["_variants"][
+                    "options"
+                ].keys()
+            )
             object_ids_set = [str(_) for _ in object_ids_set]
             keys_list = [_ for _ in keys_list if _ in object_ids_set]
             self.yaml_config["layout"]["articulations"][0]["_variants"]["options"] = {
-                key: self.yaml_config["layout"]["articulations"][0]["_variants"]["options"][key] for key in keys_list
+                key: self.yaml_config["layout"]["articulations"][0]["_variants"][
+                    "options"
+                ][key]
+                for key in keys_list
             }
 
         if override_model_file is not None:
@@ -183,7 +217,9 @@ class BaseEnv(Env):
         self.configure_env()
         obs = self.reset(level=0)
 
-        self.action_space = spaces.Box(low=-1, high=1, shape=self.agent.action_range().shape)
+        self.action_space = spaces.Box(
+            low=-1, high=1, shape=self.agent.action_range().shape
+        )
         self.observation_space = self._observation_to_space(obs)
         self.time_per_env_step = frame_skip / self.agent.control_frequency
 
@@ -210,7 +246,10 @@ class BaseEnv(Env):
         if obs_mode is not None:
             assert obs_mode in self.OBS_MODES
             self.obs_mode = obs_mode
-            if hasattr(self, "observation_space") and self.observation_space is not None:
+            if (
+                hasattr(self, "observation_space")
+                and self.observation_space is not None
+            ):
                 obs = self.get_obs()
                 self.observation_space = self._observation_to_space(obs)
         if reward_type is not None:
@@ -222,7 +261,9 @@ class BaseEnv(Env):
 
     def override_models(self, art_name, file_name):
         _this_file = Path(__file__).resolve()
-        new_model_file = _this_file.parent.joinpath("../assets/config_files/{:s}".format(file_name))
+        new_model_file = _this_file.parent.joinpath(
+            "../assets/config_files/{:s}".format(file_name)
+        )
         yaml_models = preprocess(new_model_file)
         flag = False
         for art_cfg in self.yaml_config["layout"]["articulations"]:
@@ -231,7 +272,11 @@ class BaseEnv(Env):
                 flag = True
                 break
         if not flag:
-            raise Exception("Override models failed: {:s} not found in the yaml file.".format(art_name))
+            raise Exception(
+                "Override models failed: {:s} not found in the yaml file.".format(
+                    art_name
+                )
+            )
 
     def reset_level(self):
         self.agent.reset()
@@ -266,14 +311,18 @@ class BaseEnv(Env):
         self.relative_scale = 1
         if self.scale_ratio_range is not None:
             if isinstance(self.scale_ratio_range, (list, tuple)):
-                self.relative_scale = self._env_aug.uniform(low=self.scale_ratio_range[0], high=self.scale_ratio_range[1])
+                self.relative_scale = self._env_aug.uniform(
+                    low=self.scale_ratio_range[0], high=self.scale_ratio_range[1]
+                )
             elif isinstance(self.scale_ratio_range, Number):
                 self.relative_scale = self.scale_ratio_range
             else:
                 raise NotImplementedError
         self.delta_pos = np.zeros(3)
         if self.xy_noise_std is not None:
-            self.delta_pos[:2] = (self._env_aug.rand(2) - 0.5) * 2 * np.array(self.xy_noise_std)
+            self.delta_pos[:2] = (
+                (self._env_aug.rand(2) - 0.5) * 2 * np.array(self.xy_noise_std)
+            )
         # print(self.delta_pos)
 
         # recreate scene
@@ -286,8 +335,12 @@ class BaseEnv(Env):
 
         config = deepcopy(self.yaml_config)
         config = process_variables(config, self._level_rng)
-        self.all_model_ids = list(config["layout"]["articulations"][0]["_variants"]["options"].keys())
-        self.level_config, self.level_variant_config = process_variants(config, self._level_rng, self.variant_config)
+        self.all_model_ids = list(
+            config["layout"]["articulations"][0]["_variants"]["options"].keys()
+        )
+        self.level_config, self.level_variant_config = process_variants(
+            config, self._level_rng, self.variant_config
+        )
 
         # load everything
         self._setup_renderer()
@@ -317,14 +370,18 @@ class BaseEnv(Env):
     def _init_eval_record(self):
         self.keep_good_steps = defaultdict(int)
         keep_good_time = 0.5
-        self.keep_good_steps_threshold = int(np.ceil(keep_good_time * self.agent.control_frequency / self.frame_skip))
+        self.keep_good_steps_threshold = int(
+            np.ceil(keep_good_time * self.agent.control_frequency / self.frame_skip)
+        )
 
     def _setup_main_rng(self, seed):
         self._main_seed = seed
         self._main_rng = np.random.RandomState(seed)
 
     def _setup_renderer(self):
-        self._scene.set_ambient_light(self.level_config["render"]["ambient_light"]["color"])
+        self._scene.set_ambient_light(
+            self.level_config["render"]["ambient_light"]["color"]
+        )
         for pl in self.level_config["render"]["point_lights"]:
             self._scene.add_point_light(pl["position"], pl["color"])
         for dl in self.level_config["render"]["directional_lights"]:
@@ -343,25 +400,30 @@ class BaseEnv(Env):
             elif self.camera_on_base:
                 parent = self.agent.get_base_link()
             elif self.camera_on_hand:
-                if hasattr(self.agent, 'hand'):
-                    parent = self.agent.hand # single arm env
+                if hasattr(self.agent, "hand"):
+                    parent = self.agent.hand  # single arm env
                 else:
-                    parent = self.agent.rhand # dual arm env
-            
+                    parent = self.agent.rhand  # dual arm env
+
             camera_mount_actor = parent
             del cam_info["parent"]
         else:
             camera_mount_actor = self._scene.create_actor_builder().build_kinematic()
         pose = sapien.Pose(cam_info["position"], cam_info["rotation"])
         del cam_info["position"], cam_info["rotation"]
-        camera = self._scene.add_mounted_camera(actor=camera_mount_actor, pose=pose, **cam_info, fovx=0)
+        camera = self._scene.add_mounted_camera(
+            actor=camera_mount_actor, pose=pose, **cam_info, fovx=0
+        )
         return camera
 
     def _setup_cameras(self):
         cameras = []
         for cam_info in self.level_config["render"]["cameras"]:
             if "sub_cameras" in cam_info:
-                sub_cameras = [self._load_camera(sub_cam_info) for sub_cam_info in cam_info["sub_cameras"]]
+                sub_cameras = [
+                    self._load_camera(sub_cam_info)
+                    for sub_cam_info in cam_info["sub_cameras"]
+                ]
                 combined_camera = CombinedCamera(cam_info["name"], sub_cameras)
                 cameras.append(combined_camera)
             else:
@@ -400,12 +462,16 @@ class BaseEnv(Env):
                 urdf = articulation_config["urdf_file"]
             else:
                 self.selected_id = articulation_config["partnet_mobility_id"]
-                urdf = download_data(articulation_config["partnet_mobility_id"], directory=None)
+                urdf = download_data(
+                    articulation_config["partnet_mobility_id"], directory=None
+                )
                 urdf1 = Path(urdf).parent.joinpath("mobility_cvx.urdf")
                 urdf2 = Path(urdf).parent.joinpath("mobility_vhacd.urdf")
                 urdf3 = Path(urdf).parent.joinpath("mobility_fixed.urdf")
 
-                self.articulation_scale = articulation_config.get("scale", 1) * self.relative_scale
+                self.articulation_scale = (
+                    articulation_config.get("scale", 1) * self.relative_scale
+                )
                 if urdf1.exists() and self.vhacd_mode in ["new", "cvx"]:
                     # Use Minghua's VHACD
                     # print('Use CVX')
@@ -434,14 +500,18 @@ class BaseEnv(Env):
 
             config = {}
             if "surface_material" in articulation_config:
-                config["material"] = self.physical_materials[articulation_config["surface_material"]]
+                config["material"] = self.physical_materials[
+                    articulation_config["surface_material"]
+                ]
             if "density" in articulation_config:
                 config["density"] = articulation_config["density"]
             articulation = loader.load(urdf, config=config)
             if "initial_qpos" in articulation_config:
                 articulation.set_qpos(articulation_config["initial_qpos"])
 
-            root_pose = Pose(articulation_config["position"], articulation_config["rotation"])
+            root_pose = Pose(
+                articulation_config["position"], articulation_config["rotation"]
+            )
             if not loader.fix_root_link:
                 # For chair and bucket. Change the height only, because the position of the object is randomized.
                 p = root_pose.p
@@ -477,8 +547,12 @@ class BaseEnv(Env):
             a = self._scene.add_ground(
                 shape["altitude"],
                 False,
-                self.physical_materials[shape["surface_material"]] if "surface_material" in shape else None,
-                self.render_materials[shape["render_material"]] if "render_material" in shape else None,
+                self.physical_materials[shape["surface_material"]]
+                if "surface_material" in shape
+                else None,
+                self.render_materials[shape["render_material"]]
+                if "render_material" in shape
+                else None,
             )
             a.set_name(actor["name"])
             self.actors[actor["name"]] = {"actor": a, "init_state": a.pack()}
@@ -509,7 +583,9 @@ class BaseEnv(Env):
             assert "type" in shape
             if shape["type"] in ["box", "sphere", "capsule"]:
                 if shape["collision"]:
-                    shape_func = getattr(builder, "add_{}_collision".format(shape["type"]))
+                    shape_func = getattr(
+                        builder, "add_{}_collision".format(shape["type"])
+                    )
                     shape_func(
                         Pose(position, rotation),
                         shape["size"],
@@ -517,7 +593,9 @@ class BaseEnv(Env):
                         density=shape["physical_density"],
                     )
                 if shape["visual"]:
-                    visual_func = getattr(builder, "add_{}_visual".format(shape["type"]))
+                    visual_func = getattr(
+                        builder, "add_{}_visual".format(shape["type"])
+                    )
                     if "render_material" in shape:
                         render_mat = self.render_materials[shape["render_material"]]
                     else:
@@ -534,7 +612,9 @@ class BaseEnv(Env):
                         density=shape["physical_density"],
                     )
                 if shape["visual"]:
-                    builder.add_visual_from_file(shape["file"], Pose(position, rotation), scale=shape["scale"])
+                    builder.add_visual_from_file(
+                        shape["file"], Pose(position, rotation), scale=shape["scale"]
+                    )
             else:
                 raise NotImplementedError
 
@@ -543,7 +623,9 @@ class BaseEnv(Env):
         else:
             a = builder.build()
         a.set_name(actor["name"])
-        a.set_pose(Pose(np.array(actor["position"]) + self.delta_pos, actor["rotation"]))
+        a.set_pose(
+            Pose(np.array(actor["position"]) + self.delta_pos, actor["rotation"])
+        )
         self.actors[actor["name"]] = {"actor": a, "init_state": a.pack()}
 
     def _setup_objects(self):
@@ -573,11 +655,15 @@ class BaseEnv(Env):
             warnings.warn(
                 "Simulation frequency does not divide agent control frequency. The number of simulation step per control step will be rounded"
             )
-        self.n_simulation_per_control_step = self.simulation_frequency // self.agent.control_frequency
+        self.n_simulation_per_control_step = (
+            self.simulation_frequency // self.agent.control_frequency
+        )
         self.robot_link_ids = self.agent.get_link_ids()
 
     def _load_custom(self):
-        self.custom = self.level_config["custom"] if "custom" in self.level_config else None
+        self.custom = (
+            self.level_config["custom"] if "custom" in self.level_config else None
+        )
 
     def _observation_to_space(self, obs):
         if self.obs_mode == "state" or self.obs_mode == "custom":
@@ -642,7 +728,10 @@ class BaseEnv(Env):
             + arts_state
             + [
                 self.get_additional_task_info(obs_mode="state"),
-                self.agent.get_state(with_controller_state=with_controller_state, with_hand_pose=with_hand_pose),
+                self.agent.get_state(
+                    with_controller_state=with_controller_state,
+                    with_hand_pose=with_hand_pose,
+                ),
             ]
         )
 
@@ -699,7 +788,9 @@ class BaseEnv(Env):
                 self.keep_good_steps[key] += 1
             else:
                 self.keep_good_steps[key] = 0
-            eval_result_dict[key] = self.keep_good_steps[key] >= self.keep_good_steps_threshold
+            eval_result_dict[key] = (
+                self.keep_good_steps[key] >= self.keep_good_steps_threshold
+            )
         return eval_result_dict, eval_result_dict["success"]
 
     def _clip_and_scale_action(self, action):  # from [-1, 1] to real action range
@@ -713,13 +804,17 @@ class BaseEnv(Env):
         return self.n_simulation_per_control_step * self.frame_skip
 
     def step_async(self, action):
-        assert self.obs_mode == "state" and self.reward_type, "Only support state mode and sparse reward recently!"
+        assert (
+            self.obs_mode == "state" and self.reward_type
+        ), "Only support state mode and sparse reward recently!"
         if self._sub_step == 0:
             processed_action = self._clip_and_scale_action(action)
             self._sub_step_infos = [processed_action.copy(), action]
 
         if self._sub_step % self.n_simulation_per_control_step == 0:
-            self.agent.set_action(self._sub_step_infos[0].copy(), self.ego_mode)  # avoid action being changed
+            self.agent.set_action(
+                self._sub_step_infos[0].copy(), self.ego_mode
+            )  # avoid action being changed
 
         self.agent.simulation_step()
         self._sub_step += 1
@@ -759,7 +854,9 @@ class BaseEnv(Env):
         self.step_in_ep += 1
         processed_action = self._clip_and_scale_action(action)
         for __ in range(self.frame_skip):
-            self.agent.set_action(processed_action.copy(), self.ego_mode)  # avoid action being changed
+            self.agent.set_action(
+                processed_action.copy(), self.ego_mode
+            )  # avoid action being changed
             for _ in range(self.n_simulation_per_control_step):
                 self.agent.simulation_step()
                 self._scene.step()
@@ -795,16 +892,29 @@ class BaseEnv(Env):
     def check_actor_static(self, actor, max_v=None, max_ang_v=None):
         if self.step_in_ep <= 1:
             flag_v = (max_v is None) or (np.linalg.norm(actor.get_velocity()) <= max_v)
-            flag_ang_v = (max_ang_v is None) or (np.linalg.norm(actor.get_angular_velocity()) <= max_ang_v)
+            flag_ang_v = (max_ang_v is None) or (
+                np.linalg.norm(actor.get_angular_velocity()) <= max_ang_v
+            )
         else:
             pose = actor.get_pose()
             t = self.time_per_env_step
-            flag_v = (max_v is None) or (np.linalg.norm(pose.p - self._prev_actor_pose.p) <= max_v * t)
-            flag_ang_v = (max_ang_v is None) or (angle_distance(self._prev_actor_pose, pose) <= max_ang_v * t)
+            flag_v = (max_v is None) or (
+                np.linalg.norm(pose.p - self._prev_actor_pose.p) <= max_v * t
+            )
+            flag_ang_v = (max_ang_v is None) or (
+                angle_distance(self._prev_actor_pose, pose) <= max_ang_v * t
+            )
         self._prev_actor_pose = actor.get_pose()
         return flag_v and flag_ang_v
 
-    def render(self, mode="color_image", depth=False, seg=None, camera_names=None, render_mode="1+2"):
+    def render(
+        self,
+        mode="color_image",
+        depth=False,
+        seg=None,
+        camera_names=None,
+        render_mode="1+2",
+    ):
         self._scene.update_render()
         if mode == "human":
             if self._viewer is None:
@@ -833,14 +943,20 @@ class BaseEnv(Env):
                         cameras.append(camera)
             if mode in self.VISUAL_OBS_MODES:
                 views = {}
-                get_view_func = read_images_from_camera if mode in ["color_image", "rgb", "rgbd"] else read_pointclouds_from_camera
+                get_view_func = (
+                    read_images_from_camera
+                    if mode in ["color_image", "rgb", "rgbd"]
+                    else read_pointclouds_from_camera
+                )
                 if "1" in render_mode:
                     for cam in cameras:
                         cam.take_picture()
                 if "2" in render_mode:
                     for cam in cameras:
                         if isinstance(cam, CombinedCamera):
-                            view = cam.get_combined_view(mode, depth, seg_idx)  # list of dict for image, dict for pointcloud
+                            view = cam.get_combined_view(
+                                mode, depth, seg_idx
+                            )  # list of dict for image, dict for pointcloud
                         else:
                             view = get_view_func(cam, depth, seg_idx)  # dict
                         views[cam.get_name()] = view
@@ -848,7 +964,7 @@ class BaseEnv(Env):
 
     def _post_process_view(self, view_dict):
         actor_id_seg = view_dict["seg"]  # (n, m, 1)
-        mask = np.zeros(actor_id_seg.shape, dtype=np.bool)
+        mask = np.zeros(actor_id_seg.shape, dtype=np.bool_)
         for actor_id in self.robot_link_ids:
             mask = mask | (actor_id_seg == actor_id)
         view_dict["seg"] = mask
@@ -864,7 +980,12 @@ class BaseEnv(Env):
 
         for actor_index in np.unique(pcd["seg"][..., -1]):
             mask = pcd["seg"][..., -1] == actor_index
-            inv_transform = self.actor_id_map[actor_index].get_pose().inv().to_transformation_matrix()
+            inv_transform = (
+                self.actor_id_map[actor_index]
+                .get_pose()
+                .inv()
+                .to_transformation_matrix()
+            )
             # print(pcd['xyz'].shape, mask.shape, pcd['seg'].shape)
             pcd["xyz"][mask] = to_x3(to_x4(pcd["xyz"][mask]) @ inv_transform.T)
 
@@ -877,7 +998,9 @@ class BaseEnv(Env):
         # print(xyz.shape)
         for actor_index in np.unique(pcd["seg"][..., -1]):
             mask = pcd["seg"][..., -1] == actor_index
-            transform = self.actor_id_map[actor_index].get_pose().to_transformation_matrix()
+            transform = (
+                self.actor_id_map[actor_index].get_pose().to_transformation_matrix()
+            )
             xyz[mask] = to_x3(to_x4(xyz[mask]) @ transform.T)
         return xyz
 
@@ -887,8 +1010,11 @@ class BaseEnv(Env):
         return compute_generalized_external_force(self._scene, self.agent.robot)
 
     def get_agent_obs(self):
-        ret, hand_pose = self.agent.get_obs(ego_mode=self.ego_mode, cos_sin_representation=self.cos_sin_representation,
-            with_hand_pose=self.with_hand_pose)
+        ret, hand_pose = self.agent.get_obs(
+            ego_mode=self.ego_mode,
+            cos_sin_representation=self.cos_sin_representation,
+            with_hand_pose=self.with_hand_pose,
+        )
         if self.with_ext_torque:
             robot_ext_torque = (np.abs(self.get_ext_torque()) > 0.1) * 1.0
             ret = np.concatenate([ret, robot_ext_torque])
@@ -900,7 +1026,9 @@ class BaseEnv(Env):
         kwargs = dict(kwargs)
         if self.obs_mode == "rgbd":
             kwargs["depth"] = True
-        return self.render(mode=self.obs_mode, camera_names=["robot"], seg=seg, **kwargs)
+        return self.render(
+            mode=self.obs_mode, camera_names=["robot"], seg=seg, **kwargs
+        )
 
     def get_inst_labels(self):
         raise NotImplementedError
@@ -918,23 +1046,37 @@ class BaseEnv(Env):
             obs[self.obs_mode] = self.get_visual_obs(seg=seg, **kwargs)
 
             if self.with_3d_ann:
-                segs = np.split(obs[self.obs_mode]["robot"]["seg"], obs[self.obs_mode]["robot"]["seg"].shape[-1], axis=-1)
-                obs["inst_box"], obs["inst_seg"] = self.get_inst_labels(*segs) # inst_seg [Npoint], the semantic label each point belongs if a point is in an inst_box (semantic label is obtained through the visual_id a point is in)
+                segs = np.split(
+                    obs[self.obs_mode]["robot"]["seg"],
+                    obs[self.obs_mode]["robot"]["seg"].shape[-1],
+                    axis=-1,
+                )
+                obs["inst_box"], obs["inst_seg"] = self.get_inst_labels(
+                    *segs
+                )  # inst_seg [Npoint], the semantic label each point belongs if a point is in an inst_box (semantic label is obtained through the visual_id a point is in)
                 if hasattr(self, "cabinet"):
-                    obs["target_box"], obs["target_seg"] = self.get_target_inst_labels(*segs) # target_seg [Npoint], the semantic label each point belongs if a point is in a target box
+                    obs["target_box"], obs["target_seg"] = self.get_target_inst_labels(
+                        *segs
+                    )  # target_seg [Npoint], the semantic label each point belongs if a point is in a target box
                 # from pyrl.utils.visualization import visualize_3d, visualize_pcd
             if not hasattr(self, "cabinet"):
-                obs[self.obs_mode]["robot"]["seg"] = obs[self.obs_mode]["robot"]["seg"][..., 1:]
+                obs[self.obs_mode]["robot"]["seg"] = obs[self.obs_mode]["robot"]["seg"][
+                    ..., 1:
+                ]
         # post processing
         if self.obs_mode in self.VISUAL_OBS_MODES:
-            views = obs[self.obs_mode]  # views is also a dict, keys including 'robot', 'world', ...
+            views = obs[
+                self.obs_mode
+            ]  # views is also a dict, keys including 'robot', 'world', ...
             for cam_name, view in views.items():
                 if isinstance(view, list):
                     for view_dict in view:
                         self._post_process_view(view_dict)
                     combined_view = {}
                     for key in view[0].keys():
-                        combined_view[key] = np.concatenate([view_dict[key] for view_dict in view], axis=-1)
+                        combined_view[key] = np.concatenate(
+                            [view_dict[key] for view_dict in view], axis=-1
+                        )
                     views[cam_name] = combined_view
                 else:  # view is a dict
                     self._post_process_view(view)
@@ -942,21 +1084,39 @@ class BaseEnv(Env):
                 view = next(iter(views.values()))
                 obs[self.obs_mode] = view
 
-        if self.obs_mode in self.PCD_OBS_MODES and self.add_origin and hasattr(self, "chair"):
+        if (
+            self.obs_mode in self.PCD_OBS_MODES
+            and self.add_origin
+            and hasattr(self, "chair")
+        ):
             n_origin_pts = 1000
             noise_origin_std = 0.1
             obs[self.obs_mode]["xyz"] = np.concatenate(
-                [obs[self.obs_mode]["xyz"], (self._level_rng.rand(n_origin_pts, 3) - 0.5) * 2 * noise_origin_std], axis=0
+                [
+                    obs[self.obs_mode]["xyz"],
+                    (self._level_rng.rand(n_origin_pts, 3) - 0.5)
+                    * 2
+                    * noise_origin_std,
+                ],
+                axis=0,
             )
             if "rgb" in obs[self.obs_mode]:
                 red = np.zeros([n_origin_pts, 3])
                 red[:, 0] = 1
-                obs[self.obs_mode]["rgb"] = np.concatenate([obs[self.obs_mode]["rgb"], red], axis=0)
+                obs[self.obs_mode]["rgb"] = np.concatenate(
+                    [obs[self.obs_mode]["rgb"], red], axis=0
+                )
             if "seg" in obs[self.obs_mode]:
                 seg = obs[self.obs_mode]["seg"]
-                obs[self.obs_mode]["seg"] = np.concatenate([seg, np.zeros([n_origin_pts, seg.shape[-1]], dtype=seg.dtype)], axis=0)
+                obs[self.obs_mode]["seg"] = np.concatenate(
+                    [seg, np.zeros([n_origin_pts, seg.shape[-1]], dtype=seg.dtype)],
+                    axis=0,
+                )
             if "inst_seg" in obs:
-                obs["inst_seg"] = np.concatenate([obs["inst_seg"], np.ones([n_origin_pts, 1], dtype=np.uint8) * 2], axis=0)
+                obs["inst_seg"] = np.concatenate(
+                    [obs["inst_seg"], np.ones([n_origin_pts, 1], dtype=np.uint8) * 2],
+                    axis=0,
+                )
 
         if not self.with_mask:
             seg = obs[self.obs_mode].pop("seg", None)
@@ -991,7 +1151,9 @@ class BaseEnv(Env):
                     else:
                         idx = self._level_rng.randint(len(cabinet_point))
                         cabinet_point = cabinet_point[idx]
-                        self.object_index_point = apply_pose_to_points(cabinet_point, self.target_link.get_pose().inv())
+                        self.object_index_point = apply_pose_to_points(
+                            cabinet_point, self.target_link.get_pose().inv()
+                        )
 
                     # red = np.ones_like(cabinet_point)
                     # red[:, 1:] = 0
@@ -1005,7 +1167,9 @@ class BaseEnv(Env):
                 if isinstance(self.object_index_point, str):
                     obs[self.obs_mode]["target_object_point"] = np.zeros(3)
                 else:
-                    obs[self.obs_mode]["target_object_point"] = apply_pose_to_points(self.object_index_point, self.target_link.get_pose())
+                    obs[self.obs_mode]["target_object_point"] = apply_pose_to_points(
+                        self.object_index_point, self.target_link.get_pose()
+                    )
 
         if self.be_ego_mode:
             assert "xyz" in obs[self.obs_mode]
@@ -1018,7 +1182,9 @@ class BaseEnv(Env):
 
             if "target_object_point" in obs[self.obs_mode]:
                 obs[self.obs_mode]["target_object_point"][:2] -= base_pos
-                obs[self.obs_mode]["target_object_point"] = obs[self.obs_mode]["target_object_point"] @ mat.T
+                obs[self.obs_mode]["target_object_point"] = (
+                    obs[self.obs_mode]["target_object_point"] @ mat.T
+                )
 
             if self.target_xy is not None:
                 obs["target_info"] = self.target_xy - base_pos
