@@ -161,6 +161,7 @@ class OpenCabinetEnvBase(BaseEnv):
                 sign = np.logical_and(region0 <= pcd_world, pcd_world <= region1)
                 sign = np.all(sign, axis=-1)
                 return pcd_world[sign]
+
             pcd_world = crop_by_box()
 
             if pcd_world.shape[0] > 100:
@@ -578,7 +579,7 @@ class OpenCabinetEnvBase(BaseEnv):
         visual_id_seg = view_dict["seg"][..., 0]  # (n, m)
         actor_id_seg = view_dict["seg"][..., 1]  # (n, m)
 
-        masks = [np.zeros(visual_id_seg.shape, dtype=np.bool) for _ in range(3)]
+        masks = [np.zeros(visual_id_seg.shape, dtype=np.bool_) for _ in range(3)]
 
         for visual_id in self.handle_visual_ids:
             masks[0] = masks[0] | (visual_id_seg == visual_id)
