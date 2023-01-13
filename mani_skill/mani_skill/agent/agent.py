@@ -2,7 +2,12 @@ import numpy as np
 import transforms3d
 import yaml
 from gym import spaces
-from mani_skill.agent.controllers import LPFilter, PIDController, PositionController, VelocityController
+from mani_skill.agent.controllers import (
+    LPFilter,
+    PIDController,
+    PositionController,
+    VelocityController,
+)
 from mani_skill.utils.geometry import rotate_2d_vec_by_angle
 from sapien.core import Articulation, Engine, Pose, Scene
 
@@ -35,7 +40,9 @@ class CombinedAgent:
 
     def set_action(self, action: np.ndarray):
         for i, agent in enumerate(self.agents):
-            agent.set_action(action[self.action_indices[i] : self.action_indices[i + 1]])
+            agent.set_action(
+                action[self.action_indices[i] : self.action_indices[i + 1]]
+            )
 
     def simulation_step(self):
         for agent in self.agents:
@@ -45,7 +52,9 @@ class CombinedAgent:
         if by_dict:
             return [agent.get_state(by_dict=True) for agent in self.agents]
         else:
-            return np.concatenate([agent.get_state(by_dict=False) for agent in self.agents])
+            return np.concatenate(
+                [agent.get_state(by_dict=False) for agent in self.agents]
+            )
 
     def get_ee_coords(self):
         return np.concatenate([i.get_ee_coords() for i in self.agents], 0)
@@ -57,7 +66,10 @@ class CombinedAgent:
                 agent.set_state(state_each_agent, by_dict=True)
         else:
             for i, agent in enumerate(self.agents):
-                agent.set_state(state[self.state_indices[i] : self.state_indices[i + 1]], by_dict=False)
+                agent.set_state(
+                    state[self.state_indices[i] : self.state_indices[i + 1]],
+                    by_dict=False,
+                )
 
     def reset(self):
         for agent in self.agents:
@@ -91,7 +103,9 @@ class Agent:
         for link in self.config["links"]:
             link_props = {}
             if "surface_material" in link:
-                link_props["surface_material"] = self._physical_materials[link["surface_material"]]
+                link_props["surface_material"] = self._physical_materials[
+                    link["surface_material"]
+                ]
             if "patch_radius" in link:
                 link_props["patch_radius"] = link["patch_radius"]
             if "min_patch_radius" in link:
@@ -107,23 +121,33 @@ class Agent:
 
         self._init_state = self.robot.pack()
 
-        self.all_joint_indices = [[x.name for x in self.robot.get_active_joints()].index(name) for name in self.config["all_joints"]]
+        self.all_joint_indices = [
+            [x.name for x in self.robot.get_active_joints()].index(name)
+            for name in self.config["all_joints"]
+        ]
         self.controllable_joint_indices = [
-            [x.name for x in self.robot.get_active_joints()].index(name) for name in self.config["controllable_joints"]
+            [x.name for x in self.robot.get_active_joints()].index(name)
+            for name in self.config["controllable_joints"]
         ]
 
-        assert len(self.config["initial_qpos"]) == self.robot.dof, "initial_qpos does not match robot DOF"
+        assert (
+            len(self.config["initial_qpos"]) == self.robot.dof
+        ), "initial_qpos does not match robot DOF"
 
         qpos_reordered = np.zeros(self.robot.dof)
         qpos_reordered[self.all_joint_indices] = self.config["initial_qpos"]
         self.robot.set_qpos(qpos_reordered)
-        self.robot.set_root_pose(Pose(self.config["base_position"], self.config["base_rotation"]))
+        self.robot.set_root_pose(
+            Pose(self.config["base_position"], self.config["base_rotation"])
+        )
 
         name2pxjoint = dict((j.get_name(), j) for j in self.robot.get_joints())
         name2config_joint = dict((j["name"], j) for j in config["joints"])
 
         for joint in config["joints"]:
-            assert joint["name"] in name2pxjoint, "Unrecognized name in joint configurations"
+            assert (
+                joint["name"] in name2pxjoint
+            ), "Unrecognized name in joint configurations"
             j = name2pxjoint[joint["name"]]
 
             stiffness = joint.get("stiffness", 0)
@@ -135,7 +159,9 @@ class Agent:
         controllers = []
         all_action_range = []
         for name in self.config["controllable_joints"]:
-            assert name in name2config_joint, "Controllable joints properties must be configured"
+            assert (
+                name in name2config_joint
+            ), "Controllable joints properties must be configured"
             joint = name2config_joint[name]
             action_type = joint["action_type"]
             action_range = joint["action_range"]
@@ -144,7 +170,9 @@ class Agent:
 
             velocity_filter = None
             if "velocity_filter" in joint:
-                velocity_filter = LPFilter(self.control_frequency, joint["velocity_filter"]["cutoff_frequency"])
+                velocity_filter = LPFilter(
+                    self.control_frequency, joint["velocity_filter"]["cutoff_frequency"]
+                )
             if action_type == "velocity":
                 controller = VelocityController(velocity_filter)
             elif action_type == "position":
@@ -175,7 +203,9 @@ class Agent:
         qpos = self.robot.get_qpos()
         qvel = self.robot.get_qvel()
 
-        for j_idx, controller, target in zip(self.controllable_joint_indices, self.controllers, action):
+        for j_idx, controller, target in zip(
+            self.controllable_joint_indices, self.controllers, action
+        ):
             if type(controller) == PositionController:
                 output = controller.control(qpos[j_idx], target)
             elif type(controller) == VelocityController:
@@ -186,7 +216,9 @@ class Agent:
 
     def simulation_step(self):
         if self.balance_passive_force:
-            qf = self.robot.compute_passive_force(gravity=True, coriolis_and_centrifugal=True, external=False)
+            qf = self.robot.compute_passive_force(
+                gravity=True, coriolis_and_centrifugal=True, external=False
+            )
             self.robot.set_qf(qf)
 
     def get_ee_coords(self):
@@ -195,7 +227,9 @@ class Agent:
     def get_ee_vels(self):
         raise NotImplementedError()
 
-    def get_state(self, by_dict=False, with_controller_state=True, with_hand_pose=False):
+    def get_state(
+        self, by_dict=False, with_controller_state=True, with_hand_pose=False
+    ):
         state_dict = {}
         ee_pos = self.get_ee_coords().flatten()
         ee_vel = self.get_ee_vels().flatten()
@@ -233,7 +267,9 @@ class Agent:
 
     def set_state(self, state, by_dict=False):
         if not by_dict:
-            assert len(state) == self.full_state_len, "length of state is not correct, probably because controller states are missing"
+            assert (
+                len(state) == self.full_state_len
+            ), "length of state is not correct, probably because controller states are missing"
             state = state[self.num_ee * 12 :]  # remove ee_pos and ee_vel
             state_dict = {
                 "qpos": state[: self.robot.dof],
@@ -275,7 +311,13 @@ class Agent:
 
 
 def concat_vec_in_dict(d, key_list):
-    return np.concatenate([d[key] if isinstance(d[key], np.ndarray) else np.array([d[key]]) for key in key_list if key in d])
+    return np.concatenate(
+        [
+            d[key] if isinstance(d[key], np.ndarray) else np.array([d[key]])
+            for key in key_list
+            if key in d
+        ]
+    )
 
 
 class DummyMobileAgent(Agent):
@@ -299,6 +341,12 @@ class DummyMobileAgent(Agent):
         new_action = action.copy()
         if not (ego_mode is False):
             ego_xy = new_action[:2]
+            ego_xy = (
+                ego_xy
+                / max(np.linalg.norm(ego_xy), 1e-6)
+                * np.abs(ego_xy).max()
+                * 1.414
+            )
             world_xy = rotate_2d_vec_by_angle(ego_xy, self._get_base_orientation())
             new_action[:2] = world_xy
         # import pdb; pdb.set_trace()
@@ -319,15 +367,23 @@ class DummyMobileAgent(Agent):
         base_pos, base_orientation = qpos[:2], qpos[2]
         return base_pos, base_orientation
 
-    def get_obs(self, ego_mode=False, cos_sin_representation=False, with_hand_pose=False):
-        state_dict = super().get_state(by_dict=True, with_controller_state=False, with_hand_pose=with_hand_pose)
+    def get_obs(
+        self, ego_mode=False, cos_sin_representation=False, with_hand_pose=False
+    ):
+        state_dict = super().get_state(
+            by_dict=True, with_controller_state=False, with_hand_pose=with_hand_pose
+        )
         qpos, qvel = state_dict["qpos"], state_dict["qvel"]
         base_pos, base_orientation, arm_qpos = qpos[:2], qpos[2], qpos[3:]
         base_vel, base_ang_vel, arm_qvel = qvel[:2], qvel[2], qvel[3:]
-        base_rot_inv_mat = transforms3d.axangles.axangle2mat([0, 0, 1], -base_orientation)
+        base_rot_inv_mat = transforms3d.axangles.axangle2mat(
+            [0, 0, 1], -base_orientation
+        )
 
         if cos_sin_representation:
-            base_orientation = np.array([np.cos(base_orientation), np.sin(base_orientation)])
+            base_orientation = np.array(
+                [np.cos(base_orientation), np.sin(base_orientation)]
+            )
             arm_qpos = np.concatenate([np.cos(arm_qpos), np.sin(arm_qpos)])
 
         state_dict["qpos"] = arm_qpos
@@ -336,10 +392,12 @@ class DummyMobileAgent(Agent):
         state_dict["base_ang_vel"] = base_ang_vel
 
         key_list = ["ee_pos", "ee_vel", "base_vel", "base_ang_vel", "qpos", "qvel"]
-#         if ego_mode == "new":
-#             key_list = ["base_vel", "base_ang_vel", "ee_pos", "ee_vel", "qpos", "qvel"]
+        #         if ego_mode == "new":
+        #             key_list = ["base_vel", "base_ang_vel", "ee_pos", "ee_vel", "qpos", "qvel"]
         if with_hand_pose:
-            hand_pose = state_dict.pop("hand_pose") # list of sapien.Pose, in world frame, to be processed
+            hand_pose = state_dict.pop(
+                "hand_pose"
+            )  # list of sapien.Pose, in world frame, to be processed
 
         if ego_mode is True or ego_mode == "new":
             state_dict["ee_pos"] = state_dict["ee_pos"].reshape(-1, 3)
@@ -348,8 +406,8 @@ class DummyMobileAgent(Agent):
             state_dict["ee_pos"] = state_dict["ee_pos"] @ base_rot_inv_mat.T
             state_dict["ee_vel"] = state_dict["ee_vel"] @ base_rot_inv_mat.T
             state_dict["base_vel"] = state_dict["base_vel"] @ base_rot_inv_mat[:2, :2].T
-#             if ego_mode == "new":
-#                 state_dict["base_vel"] = state_dict["base_vel"] @ base_rot_inv_mat[:2, :2].T
+            #             if ego_mode == "new":
+            #                 state_dict["base_vel"] = state_dict["base_vel"] @ base_rot_inv_mat[:2, :2].T
 
             state_dict["ee_pos"] = state_dict["ee_pos"].reshape(-1)
             state_dict["ee_vel"] = state_dict["ee_vel"].reshape(-1)
@@ -365,7 +423,7 @@ class DummyMobileAgent(Agent):
             state_dict["base_pos"] = base_pos
             state_dict["base_orientation"] = base_orientation
             key_list += ["base_pos", "base_orientation"]
-        
+
         ret = concat_vec_in_dict(state_dict, key_list)
         if with_hand_pose:
             hand_pose = [np.concatenate([x.p, x.q]) for x in hand_pose]
@@ -374,9 +432,17 @@ class DummyMobileAgent(Agent):
         else:
             return ret, None
 
-    def get_state(self, by_dict=False, with_controller_state=True, with_hand_pose=False):
-        assert not with_hand_pose, "You should only get hand poses in visual observation modes"
-        state_dict = super().get_state(by_dict=True, with_controller_state=with_controller_state, with_hand_pose=with_hand_pose)
+    def get_state(
+        self, by_dict=False, with_controller_state=True, with_hand_pose=False
+    ):
+        assert (
+            not with_hand_pose
+        ), "You should only get hand poses in visual observation modes"
+        state_dict = super().get_state(
+            by_dict=True,
+            with_controller_state=with_controller_state,
+            with_hand_pose=with_hand_pose,
+        )
         qpos, qvel = state_dict["qpos"], state_dict["qvel"]
         base_pos, base_orientation, arm_qpos = qpos[:2], qpos[2], qpos[3:]
         base_vel, base_ang_vel, arm_qvel = qvel[:2], qvel[2], qvel[3:]
@@ -407,7 +473,9 @@ class DummyMobileAgent(Agent):
     def set_state(self, state, by_dict=False):
         if not by_dict:
             # if input is not dict, we need to rearrange the order before passing to super().set_state()
-            assert len(state) == self.full_state_len, "length of state is not correct, probably because controller states are missing"
+            assert (
+                len(state) == self.full_state_len
+            ), "length of state is not correct, probably because controller states are missing"
             state = state[self.num_ee * 12 :]  # remove ee_pos and ee_vel
             arms_dof = self.robot.dof - 3
             state_dict = {
@@ -425,8 +493,12 @@ class DummyMobileAgent(Agent):
         # another way
         new_state_dict = self.get_state(by_dict=True)
         new_state_dict.update(state_dict)
-        new_state_dict["qpos"] = concat_vec_in_dict(new_state_dict, ["base_pos", "base_orientation", "qpos"])
-        new_state_dict["qvel"] = concat_vec_in_dict(new_state_dict, ["base_vel", "base_ang_vel", "qvel"])
+        new_state_dict["qpos"] = concat_vec_in_dict(
+            new_state_dict, ["base_pos", "base_orientation", "qpos"]
+        )
+        new_state_dict["qvel"] = concat_vec_in_dict(
+            new_state_dict, ["base_vel", "base_ang_vel", "qvel"]
+        )
         super().set_state(new_state_dict, by_dict=True)
 
 
@@ -449,7 +521,9 @@ class DummyMobileAdjustableHeightAgent(DummyMobileAgent):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        body = [link for link in self.robot.get_links() if link.name == "adjustable_body"][0]
+        body = [
+            link for link in self.robot.get_links() if link.name == "adjustable_body"
+        ][0]
         s = body.get_collision_shapes()[0]
         gs = s.get_collision_groups()
         gs[2] = gs[2] | 1 << 30  # ignore collision with ground
@@ -460,16 +534,41 @@ class MobileA2DualArmAgent(DummyMobileAdjustableHeightAgent):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.name = "mobile_a2_dual_arm"
-        self.rfinger1_joint, self.rfinger2_joint, self.lfinger1_joint, self.lfinger2_joint = get_actor_by_name(
+        (
+            self.rfinger1_joint,
+            self.rfinger2_joint,
+            self.lfinger1_joint,
+            self.lfinger2_joint,
+        ) = get_actor_by_name(
             self.robot.get_joints(),
-            ["right_panda_finger_joint1", "right_panda_finger_joint2", "left_panda_finger_joint1", "left_panda_finger_joint2"],
+            [
+                "right_panda_finger_joint1",
+                "right_panda_finger_joint2",
+                "left_panda_finger_joint1",
+                "left_panda_finger_joint2",
+            ],
         )
-        self.rfinger1_link, self.rfinger2_link, self.lfinger1_link, self.lfinger2_link = get_actor_by_name(
-            self.robot.get_links(), ["right_panda_leftfinger", "right_panda_rightfinger", "left_panda_leftfinger", "left_panda_rightfinger"]
+        (
+            self.rfinger1_link,
+            self.rfinger2_link,
+            self.lfinger1_link,
+            self.lfinger2_link,
+        ) = get_actor_by_name(
+            self.robot.get_links(),
+            [
+                "right_panda_leftfinger",
+                "right_panda_rightfinger",
+                "left_panda_leftfinger",
+                "left_panda_rightfinger",
+            ],
         )
-        self.rhand, self.lhand = get_actor_by_name(self.robot.get_links(), ["right_panda_hand", "left_panda_hand"])
+        self.rhand, self.lhand = get_actor_by_name(
+            self.robot.get_links(), ["right_panda_hand", "left_panda_hand"]
+        )
         self.num_ee = 2
-        self.full_state_len = len(self.get_state(by_dict=False, with_controller_state=True))
+        self.full_state_len = len(
+            self.get_state(by_dict=False, with_controller_state=True)
+        )
 
     def get_ee_coords(self):
         finger_tips = [
@@ -513,12 +612,18 @@ class MobileA2SingleArmAgent(DummyMobileAdjustableHeightAgent):
         super().__init__(*args, **kwargs)
         self.name = "mobile_a2_single_arm"
         self.finger1_joint, self.finger2_joint = get_actor_by_name(
-            self.robot.get_joints(), ["right_panda_finger_joint1", "right_panda_finger_joint2"]
+            self.robot.get_joints(),
+            ["right_panda_finger_joint1", "right_panda_finger_joint2"],
         )
-        self.finger1_link, self.finger2_link = get_actor_by_name(self.robot.get_links(), ["right_panda_leftfinger", "right_panda_rightfinger"])
+        self.finger1_link, self.finger2_link = get_actor_by_name(
+            self.robot.get_links(),
+            ["right_panda_leftfinger", "right_panda_rightfinger"],
+        )
         self.hand = get_actor_by_name(self.robot.get_links(), "right_panda_hand")
         self.num_ee = 1
-        self.full_state_len = len(self.get_state(by_dict=False, with_controller_state=True))
+        self.full_state_len = len(
+            self.get_state(by_dict=False, with_controller_state=True)
+        )
 
     def get_ee_vels(self):
         finger_vels = [
