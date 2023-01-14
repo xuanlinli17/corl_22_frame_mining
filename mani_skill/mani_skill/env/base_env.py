@@ -98,6 +98,7 @@ class BaseEnv(Env):
         with_hand_pose=False,
         camera_on_base=False,
         camera_on_hand=False,
+        camera_size=None,
         **kwargs,
     ):
 
@@ -136,6 +137,7 @@ class BaseEnv(Env):
         self.camera_on_hand = camera_on_hand
         self._sub_step = 0
         self._sub_step_infos = None
+        self.camera_size = camera_size
 
         self.set_env_mode(obs_mode, reward_type)
         self._engine = _engine
@@ -389,7 +391,13 @@ class BaseEnv(Env):
 
     def _load_camera(self, cam_info):
         cam_info = deepcopy(cam_info)
+
         if "parent" in cam_info:
+            if self.camera_size is not None and cam_info["parent"] == "robot":
+                old_camera_size = max(cam_info["width"], cam_info["height"])
+                ratio = self.camera_size / old_camera_size
+                cam_info["width"] = int(cam_info["width"] * ratio)
+                cam_info["height"] = int(cam_info["height"] * ratio)
             if not self.camera_on_base and not self.camera_on_hand:
                 if cam_info["parent"] == "robot":
                     parent = self.agent.get_base_link()
