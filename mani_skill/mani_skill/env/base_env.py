@@ -1068,9 +1068,17 @@ class BaseEnv(Env):
                     )  # target_seg [Npoint], the semantic label each point belongs if a point is in a target box
                 # from pyrl.utils.visualization import visualize_3d, visualize_pcd
             if not hasattr(self, "cabinet"):
-                obs[self.obs_mode]["robot"]["seg"] = obs[self.obs_mode]["robot"]["seg"][
-                    ..., 1:
-                ]
+                if isinstance(obs[self.obs_mode]["robot"], (list, tuple)):
+                    obs[self.obs_mode]["robot"] = list(obs[self.obs_mode]["robot"])
+                    for i in range(len(obs[self.obs_mode]["robot"])):
+                        obs[self.obs_mode]["robot"][i]["seg"] = obs[self.obs_mode][
+                            "robot"
+                        ][i]["seg"][..., 1:]
+                else:
+                    obs[self.obs_mode]["robot"]["seg"] = obs[self.obs_mode]["robot"][
+                        "seg"
+                    ][..., 1:]
+
         # post processing
         if self.obs_mode in self.VISUAL_OBS_MODES:
             views = obs[
