@@ -102,7 +102,7 @@ class BaseEnv(Env):
         **kwargs,
     ):
 
-        self.IMAGE_OBS_MODES = ["rgbd", "color_image", "rgb"]
+        self.IMAGE_OBS_MODES = ["rgbd", "color_image", "rgb", "depth"]
         self.PCD_OBS_MODES = [
             "pointcloud",
             "fused_pcd",
@@ -686,7 +686,11 @@ class BaseEnv(Env):
                 dtype=obs["agent"].dtype,
             )
             ob_space = {}
-            if "xyz" in obs[self.obs_mode] or "rgb" in obs[self.obs_mode]:
+            if (
+                "xyz" in obs[self.obs_mode]
+                or "rgb" in obs[self.obs_mode]
+                or "depth" in obs[self.obs_mode]
+            ):
                 view_dict = obs[self.obs_mode]
                 for view_type, view in view_dict.items():
                     ob_space[view_type] = spaces.Box(
@@ -922,6 +926,7 @@ class BaseEnv(Env):
         seg=None,
         camera_names=None,
         render_mode="1+2",
+        rgb=True,
     ):
         self._scene.update_render()
         if mode == "human":
@@ -953,7 +958,7 @@ class BaseEnv(Env):
                 views = {}
                 get_view_func = (
                     read_images_from_camera
-                    if mode in ["color_image", "rgb", "rgbd"]
+                    if mode in ["color_image", "rgb", "rgbd", "depth"]
                     else read_pointclouds_from_camera
                 )
                 if "1" in render_mode:
@@ -963,10 +968,12 @@ class BaseEnv(Env):
                     for cam in cameras:
                         if isinstance(cam, CombinedCamera):
                             view = cam.get_combined_view(
-                                mode, depth, seg_idx
+                                mode, rgb=rgb, depth=depth, seg_indices=seg_idx
                             )  # list of dict for image, dict for pointcloud
                         else:
-                            view = get_view_func(cam, depth, seg_idx)  # dict
+                            view = get_view_func(
+                                cam, rgb=rgb, depth=depth, seg_indices=seg_idx
+                            )  # dict
                         views[cam.get_name()] = view
                     return views
 
@@ -1032,8 +1039,10 @@ class BaseEnv(Env):
 
     def get_visual_obs(self, seg="both", **kwargs):
         kwargs = dict(kwargs)
-        if self.obs_mode == "rgbd":
+        if self.obs_mode in ["rgbd", "depth"]:
             kwargs["depth"] = True
+        if self.obs_mode in ["xyz-img", "depth"]:
+            kwargs["rgb"] = False
         return self.render(
             mode=self.obs_mode, camera_names=["robot"], seg=seg, **kwargs
         )
@@ -1188,13 +1197,13 @@ class BaseEnv(Env):
                     )
 
         if self.be_ego_mode:
-            assert "xyz" in obs[self.obs_mode]
-            from transforms3d.axangles import axangle2mat
+            if "xyz" in obs[self.obs_mode]:
+                from transforms3d.axangles import axangle2mat
 
-            base_pos, base_orientation = self.agent.get_base_state()
-            mat = axangle2mat([0, 0, 1], -base_orientation)
-            obs[self.obs_mode]["xyz"][..., :2] -= base_pos
-            obs[self.obs_mode]["xyz"] = obs[self.obs_mode]["xyz"] @ mat.T
+                base_pos, base_orientation = self.agent.get_base_state()
+                mat = axangle2mat([0, 0, 1], -base_orientation)
+                obs[self.obs_mode]["xyz"][..., :2] -= base_pos
+                obs[self.obs_mode]["xyz"] = obs[self.obs_mode]["xyz"] @ mat.T
 
             if "target_object_point" in obs[self.obs_mode]:
                 obs[self.obs_mode]["target_object_point"][:2] -= base_pos
@@ -1202,8 +1211,10 @@ class BaseEnv(Env):
                     obs[self.obs_mode]["target_object_point"] @ mat.T
                 )
 
-            if self.target_xy is not None:
-                obs["target_info"] = self.target_xy - base_pos
+        if self.target_xy is not None and "xyz" not in obs[self.obs_mode]:
+            base_pos, base_orientation = self.agent.get_base_state()
+            # We do not add origin in to visual observation, if the observation space is not pointcloud
+            obs["target_info"] = self.target_xy - base_pos
         return obs
 
     def get_to_ego_pose(self):
