@@ -15,7 +15,8 @@ def read_images_from_camera(cam, rgb=True, depth=False, seg_indices=None):
     if rgb:
         img["rgb"] = get_texture_by_dltensor(cam, "Color")[:, :, :3]
     if depth:
-        img["depth"] = get_texture_by_dltensor(cam, "Position")[:, :, [-1]]
+        img["depth"] = -get_texture_by_dltensor(cam, "Position")[:, :, [2]]
+        img["depth"][img["depth"] > 10] = 0
     if seg_indices is not None:
         seg = get_texture_by_dltensor(cam, "Segmentation", "uint32")[
             ..., seg_indices
